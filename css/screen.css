@@ -1,0 +1,54 @@
+body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 21px;
+}
+
+a:link { color: #222; }
+a:visited { color: #777; }
+
+#container {
+    max-width: 60em;
+    margin: 0 auto;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    text-align: left;
+    padding: 2px 5px 3px 5px;
+}
+
+th.numeric,
+td.numeric,
+tfoot th.col-name {
+    text-align: right;
+}
+
+thead th a {
+    color: #000 !important;
+}
+
+tfoot {
+    font-weight: bold;
+}
+
+tbody td {
+    border-bottom: 1px solid transparent;
+}
+
+tbody tr:nth-child(odd) td {
+    background-color: #ededed;
+}
+
+tbody tr:hover td {
+    border-color: black;
+    border-style: dashed;
+}
+
+.note {
+    background-color: #ffd !important;
+}

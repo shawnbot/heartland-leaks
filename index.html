@@ -6,56 +6,7 @@
         <script type="text/javascript" src="js/vendor/d3/d3.csv.min.js"></script>
         <script type="text/javascript" src="js/vendor/colorbrewer.js"></script>
         <style type="text/css">
-            body {
-                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-                font-size: 15px;
-                line-height: 21px;
-            }
-
-            a:link { color: #222; }
-            a:visited { color: #777; }
-
-            #container {
-                max-width: 60em;
-                margin: 0 auto;
-            }
-
-            table {
-                border-collapse: collapse;
-                width: 100%;
-            }
-
-            th, td {
-                text-align: left;
-                padding: 2px 5px 3px 5px;
-            }
-
-            th.numeric,
-            td.numeric {
-                text-align: right;
-            }
-
-            thead th a {
-                color: #000 !important;
-            }
-
-            tfoot {
-                font-weight: bold;
-            }
-
-            tbody td {
-                border-bottom: 1px solid transparent;
-            }
-
-            tbody tr:nth-child(odd) td {
-                background-color: #ededed;
-            }
-
-            tbody tr:hover td {
-                border-color: black;
-                border-style: dashed;
-            }
-
+            @import url(css/screen.css);
         </style>
     </head>
     <body>
@@ -70,15 +21,24 @@
             include their <a href="http://www.desmogblog.com/sites/beta.desmogblog.com/files/(1-15-2012)%202012%20Fundraising%20Plan.pdf">2012 fundraising plan</a>,
             which lists the foundation's major donors.</p>
 
-            <form id="filters">
+            <p>Below are the corporations, foundations, and individuals who donated
+            <strong>$10,000</strong> or more in 2010 or 2011, or who are
+            projected to do so in 2012.</p>
+
+            <div id="filters">
                 <p>Filter by name: <input id="filter-name"></p>
-            </form>
+            </div>
 
             <table id="donors">
                 <thead><tr></tr></thead>
                 <tfoot><tr></tr></tfoot>
                 <tbody></tbody>
             </table>
+
+            <p class="note"><strong>*</strong> Donors who gave nothing in 2011
+            are listed as having given 100% of their 2012 donations as a
+            percentage of those in 2011, because this technically represents an
+            infinite increase. (<var>n</var> / 0 &times; 100 = &infin;)</p>
         </div>
 
         <script type="text/javascript" defer>
@@ -116,6 +76,7 @@
             "2012": dollars,
             // "2012 as % of 2011" gets a special one
             "pct": d3.scale.linear()
+                .clamp(true)
                 .domain([0, 100, 200, 500, 1000])
                 .range(colorbrewer.Reds[5])
         };
@@ -159,11 +120,16 @@
 
         // update the sort order, where key is the name if a column sort key
         // and a flag indicating ascending (truthy) or descending (falsy) order.
+        var secondary_sort = "2012";
         function sortBy(key, asc) {
             var cmp = asc ? d3.ascending : d3.descending;
             table.selectAll("tbody tr")
                 .sort(function(a, b) {
-                    return cmp(a.parsed[key], b.parsed[key]);
+                    var aa = a.parsed[key],
+                        bb = b.parsed[key];
+                    return (aa == bb && key != secondary_sort)
+                        ? cmp(a.parsed[secondary_sort], b.parsed[secondary_sort])
+                        : cmp(aa, bb);
                 });
         }
 
@@ -253,6 +219,7 @@
              * Then we return an array of column objects, each of which with
              * the following properties:
              *
+             * "row": the original row object
              * "col": the column reference ({"key": "2010", "label": ...})
              * "str": the original column value ("$10,000")
              * "num": the parsed numeric value (10000, or the "str" if NaN)
@@ -264,6 +231,7 @@
                         num = parseNum(val);
                     donor.parsed[col.key] = num;
                     return {
+                        row: donor,
                         col: col,
                         str: val,
                         num: num
@@ -286,6 +254,18 @@
                 .enter()
                 .append("td")
                     .attr("class", cellClasses);
+
+            // technically the "??" values are positive infinity
+            // because they represent some value divided by zero,
+            // but we'll treat them as 100%
+            cells.filter(".col-pct")
+                .each(function(d) {
+                    if (d.str == "??") {
+                        d.str = "* 100%";
+                        d.num = d.row.parsed.pct = 100;
+                        d3.select(this).classed("note", true);
+                    }
+                });
 
             // iterate over all the cells...
             cells.each(function(d) {
@@ -320,7 +300,7 @@
                 .selectAll("td")
                 .data(donorCells)
                 .enter()
-                .append("td")
+                .append("th")
                     .attr("class", cellClasses)
                     .text(function(d) { return d.str; });
 
