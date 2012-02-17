@@ -77,8 +77,8 @@
             // "2012 as % of 2011" gets a special one
             "pct": d3.scale.linear()
                 .clamp(true)
-                .domain([0, 100, 200, 500, 1000])
-                .range(colorbrewer.Reds[5])
+                .domain([0, 100, 200, 1000])
+                .range(["rgb(255,255,255)", dc[0], dc[1], dc[2]])
         };
 
         // append <th> elements for each column
