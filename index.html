@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Headlands Institute: 2012 Donors</title>
+        <title>Heartland Institute: 2012 Donors</title>
         <script type="text/javascript" src="js/vendor/d3/d3.min.js"></script>
         <script type="text/javascript" src="js/vendor/d3/d3.csv.min.js"></script>
         <script type="text/javascript" src="js/vendor/colorbrewer.js"></script>
@@ -15,8 +15,14 @@
             a:link { color: #222; }
             a:visited { color: #777; }
 
+            #container {
+                max-width: 60em;
+                margin: 0 auto;
+            }
+
             table {
                 border-collapse: collapse;
+                width: 100%;
             }
 
             th, td {
@@ -53,14 +59,27 @@
         </style>
     </head>
     <body>
-        <form id="filters">
-            <p>Filter by name: <input id="filter-name"></p>
-        </form>
-        <table id="donors">
-            <thead><tr></tr></thead>
-            <tfoot><tr></tr></tfoot>
-            <tbody></tbody>
-        </table>
+        <div id="container">
+            <h1>The Heartland Institute: 2012 Fundraising Plan</h1>
+            <h2>Big Donors</h2>
+
+            <p><a href="http://heartland.org/">The Heartland Institute</a> is a
+            self-described "think tank" that funds climate change denialism and sows
+            disinformation through its PR and lobbying efforts. Recently
+            <a href="http://www.desmogblog.com/heartland-insider-exposes-institute-s-budget-and-strategy">leaked documents</a>
+            include their <a href="http://www.desmogblog.com/sites/beta.desmogblog.com/files/(1-15-2012)%202012%20Fundraising%20Plan.pdf">2012 fundraising plan</a>,
+            which lists the foundation's major donors.</p>
+
+            <form id="filters">
+                <p>Filter by name: <input id="filter-name"></p>
+            </form>
+
+            <table id="donors">
+                <thead><tr></tr></thead>
+                <tfoot><tr></tr></tfoot>
+                <tbody></tbody>
+            </table>
+        </div>
 
         <script type="text/javascript" defer>
 
