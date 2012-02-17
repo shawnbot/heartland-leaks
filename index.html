@@ -12,6 +12,9 @@
                 line-height: 21px;
             }
 
+            a:link { color: #222; }
+            a:visited { color: #777; }
+
             table {
                 border-collapse: collapse;
             }
@@ -24,6 +27,10 @@
             th.numeric,
             td.numeric {
                 text-align: right;
+            }
+
+            thead th a {
+                color: #000 !important;
             }
 
             tfoot {
@@ -47,7 +54,7 @@
     </head>
     <body>
         <form id="filters">
-            <p>Filter by name: <input id="filter"></p>
+            <p>Filter by name: <input id="filter-name"></p>
         </form>
         <table id="donors">
             <thead><tr></tr></thead>
@@ -57,8 +64,15 @@
 
         <script type="text/javascript" defer>
 
+        // our table
         var table = d3.select("#donors");
 
+        /*
+         * data columns, each with:
+         * 1. sort key (for linking and looking up sortable parsed values)
+         * 2. a label (for the table header text)
+         * 3. a flag indicating whether its values are numeric
+         */
         var cols = [
             {key: "name", label: "Name", numeric: false},
             {key: "2010", label: "2010 Actual", numeric: true},
@@ -68,38 +82,48 @@
             {key: "prj", label: "Project", numeric: false}
         ];
 
+        // dollar value color scale
         var dc = colorbrewer.Reds[3],
             dollars = d3.scale.linear()
                 .clamp(true)
                 .domain([0, 10000, 100000, 500000])
                 .range(["rgb(255,255,255)", dc[0], dc[1], dc[2]]);
 
+        // column scales by key
         var scales = {
+            // all years get the same scale
             "2010": dollars,
             "2011": dollars,
             "2012": dollars,
+            // "2012 as % of 2011" gets a special one
             "pct": d3.scale.linear()
                 .domain([0, 100, 200, 500, 1000])
                 .range(colorbrewer.Reds[5])
         };
 
+        // append <th> elements for each column
         var headers = table.select("thead tr")
             .selectAll("th")
             .data(cols)
             .enter()
             .append("th")
+                // class them according to whether the column is numeric
                 .attr("class", function(col) {
                     return col.numeric ? "numeric" : "alpha";
                 })
                 .attr("scope", "col");
 
+        // insert sort links into each one
         var links = headers.append("a")
             .attr("href", function(col) { return "#" + col.key; })
             .text(function(col) { return col.label; });
 
+        // parse a CSV data value as a number
         function parseNum(str) {
+            // return null if no str
             if (!str) {
                 return null;
+            // otherwise, attempt to parse as a number
             } else {
                 var num;
                 if (str.charAt(0) == "$") {
@@ -109,10 +133,13 @@
                 } else {
                     num = parseFloat(str);
                 }
+                // if NaN, return the string so it's still sortable
                 return isNaN(num) ? str : num;
             }
         }
 
+        // update the sort order, where key is the name if a column sort key
+        // and a flag indicating ascending (truthy) or descending (falsy) order.
         function sortBy(key, asc) {
             var cmp = asc ? d3.ascending : d3.descending;
             table.selectAll("tbody tr")
@@ -121,23 +148,40 @@
                 });
         }
 
+        // apply the location.hash, updating the sort order
         function applyHash() {
+            // remove the leading "#" 
             var key = location.hash.substr(1),
+                // assume descending first
                 asc = false;
+            // "+key" means sort ascending
             if (key.charAt(0) == "+") {
                 asc = true;
+                // remove the "+"
                 key = key.substr(1);
             }
             sortBy(key, asc);
 
+            // update the "href" attributes of the links
             links.attr("href", function(col) {
+                // reverse direction if this is the current sort order
                 var dir = col.key == key
                     ? asc ? "" : "+"
                     : "";
                 return "#" + dir + col.key;
             });
+
+            // update sort-specific classes for styling
+            links.attr("class", function(col) {
+                return (col.key == key)
+                    ? "sorted " + (asc ? "asc" : "desc")
+                    : "unsorted";
+            });
         }
 
+        // filter the rows (by toggling their CSS "display" property)
+        // according to whether their name matches the provided pattern
+        // (note: this can be a regular expression, e.g. "^b")
         function filterNames(pattern) {
             var rows = table.selectAll("tbody tr");
             if (pattern && pattern.length) {
@@ -150,10 +194,12 @@
             }
         }
 
-        d3.select("#filter")
+        // listen for "keyup" events on the #filter-name text input
+        d3.select("#filter-name")
             .on("keyup", function() {
                 var e = d3.event;
                 switch (e.keyCode) {
+                    // if they pressed escape, clear the value
                     case 27:
                         this.value = "";
                         break;
@@ -161,15 +207,37 @@
                 filterNames(this.value);
             });
 
+        // load the CSV
         d3.csv("data/2012-donors.csv", function(donors) {
+            // the last row is the totals; pop it off the list
             var totals = donors.pop();
 
+            // create a row for each donor
             var rows = table.select("tbody")
                 .selectAll("tr")
                 .data(donors)
                 .enter()
                 .append("tr");
 
+            /*
+             * This function returns an array of cell data for a given donor
+             * row. Here we also create a new object property "parsed" on each
+             * donor object and parse each of the columns into a corresponding
+             * key, so:
+             *
+             * var donor = {"2010 Actual": "$10,000", ...}
+             *
+             * becomes:
+             *
+             * {"parsed": {"2010": 10000, ...}, "2010 Actual": ...}
+             *
+             * Then we return an array of column objects, each of which with
+             * the following properties:
+             *
+             * "col": the column reference ({"key": "2010", "label": ...})
+             * "str": the original column value ("$10,000")
+             * "num": the parsed numeric value (10000, or the "str" if NaN)
+             */
             function donorCells(donor) {
                 donor.parsed = {};
                 return cols.map(function(col) {
@@ -184,6 +252,7 @@
                 });
             }
 
+            // returns a "class" attribute value for a given cell
             function cellClasses(d) {
                 var classes = [
                     "col-" + d.col.key,
@@ -192,30 +261,41 @@
                 return classes.join(" ");
             }
 
+            // create the cells for each row
             var cells = rows.selectAll("td")
                 .data(donorCells)
                 .enter()
                 .append("td")
                     .attr("class", cellClasses);
 
-            cells.filter(".col-name")
-                .append("a")
-                    .attr("href", function(d) {
-                        return "http://www.google.com/search?rls=en&q=" + encodeURIComponent(d.str) + "&ie=UTF-8&oe=UTF-8";
-                    })
-                    .text(function(d) { return d.str; });
+            // iterate over all the cells...
+            cells.each(function(d) {
+                // the name column cells get a link to Google
+                if (d.col.key == "name") {
+                    d3.select(this)
+                        .append("a")
+                            .attr("href", function(d) {
+                                return "http://www.google.com/search?rls=en&q=" + encodeURIComponent(d.str) + "&ie=UTF-8&oe=UTF-8";
+                            })
+                            .text(function(d) { return d.str; });
+                // and the rest just get the text
+                } else {
+                    d3.select(this)
+                        .text(function(d) { return d.str; });
+                }
+            });
 
-            cells.filter(function(d) { return d.col.key != "name"; })
-                .text(function(d) { return d.str; });
-
+            // color the cells that have scales defined
             cells.filter(function(d) { return d.col.key in scales; })
                 .style("background", function(d) {
                     var scale = scales[d.col.key];
                     return d.col.numeric
+                        // if it's numeric and NaN, use the bottom of the range
                         ? isNaN(d.num) ? scale.range()[0] : scale(d.num)
                         : scale(d.str);
                 });
 
+            // add the totals row to the <tfoot>
             table.selectAll("tfoot tr")
                 .data([totals])
                 .selectAll("td")
@@ -226,7 +306,9 @@
                     .text(function(d) { return d.str; });
 
 
+            // listen for "hashchange" events and update the hash accordingly
             window.addEventListener("hashchange", applyHash);
+            // and if there's a hash, update right away
             if (location.hash.length) {
                 applyHash();
             }
