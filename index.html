@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Headlands Institute: 2012 Donors</title>
+        <script type="text/javascript" src="js/vendor/d3/d3.min.js"></script>
+        <script type="text/javascript" src="js/vendor/d3/d3.csv.min.js"></script>
+        <script type="text/javascript" src="js/vendor/colorbrewer.js"></script>
+        <style type="text/css">
+            body {
+                font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+                font-size: 15px;
+                line-height: 21px;
+            }
+
+            table {
+                border-collapse: collapse;
+            }
+
+            th, td {
+                text-align: left;
+                padding: 2px 5px 3px 5px;
+            }
+
+            th.numeric,
+            td.numeric {
+                text-align: right;
+            }
+
+            tfoot {
+                font-weight: bold;
+            }
+
+            tbody td {
+                border-bottom: 1px solid transparent;
+            }
+
+            tbody tr:nth-child(odd) td {
+                background-color: #ededed;
+            }
+
+            tbody tr:hover td {
+                border-color: black;
+                border-style: dashed;
+            }
+
+        </style>
+    </head>
+    <body>
+        <form id="filters">
+            <p>Filter by name: <input id="filter"></p>
+        </form>
+        <table id="donors">
+            <thead><tr></tr></thead>
+            <tfoot><tr></tr></tfoot>
+            <tbody></tbody>
+        </table>
+
+        <script type="text/javascript" defer>
+
+        var table = d3.select("#donors");
+
+        var cols = [
+            {key: "name", label: "Name", numeric: false},
+            {key: "2010", label: "2010 Actual", numeric: true},
+            {key: "2011", label: "2011 Actual", numeric: true},
+            {key: "2012", label: "2012 Projected", numeric: true},
+            {key: "pct", label: "2012 as % of 2011", numeric: true},
+            {key: "prj", label: "Project", numeric: false}
+        ];
+
+        var dc = colorbrewer.Reds[3],
+            dollars = d3.scale.linear()
+                .clamp(true)
+                .domain([0, 10000, 100000, 500000])
+                .range(["rgb(255,255,255)", dc[0], dc[1], dc[2]]);
+
+        var scales = {
+            "2010": dollars,
+            "2011": dollars,
+            "2012": dollars,
+            "pct": d3.scale.linear()
+                .domain([0, 100, 200, 500, 1000])
+                .range(colorbrewer.Reds[5])
+        };
+
+        var headers = table.select("thead tr")
+            .selectAll("th")
+            .data(cols)
+            .enter()
+            .append("th")
+                .attr("class", function(col) {
+                    return col.numeric ? "numeric" : "alpha";
+                })
+                .attr("scope", "col");
+
+        var links = headers.append("a")
+            .attr("href", function(col) { return "#" + col.key; })
+            .text(function(col) { return col.label; });
+
+        function parseNum(str) {
+            if (!str) {
+                return null;
+            } else {
+                var num;
+                if (str.charAt(0) == "$") {
+                    num = parseInt(str.substr(1).replace(/,/g, ''));
+                } else if (str.charAt(str.length - 1) == "%") {
+                    num = parseInt(str.substr(0, str.length - 1));
+                } else {
+                    num = parseFloat(str);
+                }
+                return isNaN(num) ? str : num;
+            }
+        }
+
+        function sortBy(key, asc) {
+            var cmp = asc ? d3.ascending : d3.descending;
+            table.selectAll("tbody tr")
+                .sort(function(a, b) {
+                    return cmp(a.parsed[key], b.parsed[key]);
+                });
+        }
+
+        function applyHash() {
+            var key = location.hash.substr(1),
+                asc = false;
+            if (key.charAt(0) == "+") {
+                asc = true;
+                key = key.substr(1);
+            }
+            sortBy(key, asc);
+
+            links.attr("href", function(col) {
+                var dir = col.key == key
+                    ? asc ? "" : "+"
+                    : "";
+                return "#" + dir + col.key;
+            });
+        }
+
+        function filterNames(pattern) {
+            var rows = table.selectAll("tbody tr");
+            if (pattern && pattern.length) {
+                pattern = new RegExp(pattern, "i");
+                rows.style("display", function(d) {
+                    return d.Name.match(pattern) ? "" : "none";
+                });
+            } else {
+                rows.style("display", "");
+            }
+        }
+
+        d3.select("#filter")
+            .on("keyup", function() {
+                var e = d3.event;
+                switch (e.keyCode) {
+                    case 27:
+                        this.value = "";
+                        break;
+                }
+                filterNames(this.value);
+            });
+
+        d3.csv("data/2012-donors.csv", function(donors) {
+            var totals = donors.pop();
+
+            var rows = table.select("tbody")
+                .selectAll("tr")
+                .data(donors)
+                .enter()
+                .append("tr");
+
+            function donorCells(donor) {
+                donor.parsed = {};
+                return cols.map(function(col) {
+                    var val = donor[col.label],
+                        num = parseNum(val);
+                    donor.parsed[col.key] = num;
+                    return {
+                        col: col,
+                        str: val,
+                        num: num
+                    };
+                });
+            }
+
+            function cellClasses(d) {
+                var classes = [
+                    "col-" + d.col.key,
+                    d.col.numeric ? "numeric" : "alpha"
+                ];
+                return classes.join(" ");
+            }
+
+            var cells = rows.selectAll("td")
+                .data(donorCells)
+                .enter()
+                .append("td")
+                    .attr("class", cellClasses);
+
+            cells.filter(".col-name")
+                .append("a")
+                    .attr("href", function(d) {
+                        return "http://www.google.com/search?rls=en&q=" + encodeURIComponent(d.str) + "&ie=UTF-8&oe=UTF-8";
+                    })
+                    .text(function(d) { return d.str; });
+
+            cells.filter(function(d) { return d.col.key != "name"; })
+                .text(function(d) { return d.str; });
+
+            cells.filter(function(d) { return d.col.key in scales; })
+                .style("background", function(d) {
+                    var scale = scales[d.col.key];
+                    return d.col.numeric
+                        ? isNaN(d.num) ? scale.range()[0] : scale(d.num)
+                        : scale(d.str);
+                });
+
+            table.selectAll("tfoot tr")
+                .data([totals])
+                .selectAll("td")
+                .data(donorCells)
+                .enter()
+                .append("td")
+                    .attr("class", cellClasses)
+                    .text(function(d) { return d.str; });
+
+
+            window.addEventListener("hashchange", applyHash);
+            if (location.hash.length) {
+                applyHash();
+            }
+
+        });
+
+        </script>
+    </body>
+</html>
