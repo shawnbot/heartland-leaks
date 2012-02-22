@@ -21,10 +21,13 @@
             include their <a href="http://www.desmogblog.com/sites/beta.desmogblog.com/files/(1-15-2012)%202012%20Fundraising%20Plan.pdf">2012 fundraising plan</a>,
             which lists the foundation's major donors.</p>
 
-            <p>Below are the corporations, foundations, and individuals who donated
-            <strong>$10,000</strong> or more in 2010 or 2011, or who are
-            projected to do so in 2012.</p>
+            <p>Below are the corporations, foundations, and individuals who
+            donated <strong>$10,000</strong> or more in either 2010 or 2011, or
+            are projected to do so in 2012. You can download
+            <a href="data/2012-donors.csv">the data</a> in
+            <abbr title="comma-separated values">CSV</abbr> format.</p>
 
+            <p>Read more about Heartland's plan to fund major projects <a href="#projects">below</a>.</p>
             <div id="filters">
                 <p>Filter by name: <input id="filter-name"></p>
             </div>
@@ -37,8 +40,80 @@
 
             <p class="note"><strong>*</strong> Donors who gave nothing in 2011
             are listed as having given 100% of their 2012 donations as a
-            percentage of those in 2011, because this technically represents an
-            infinite increase. (<var>n</var> / 0 &times; 100 = &infin;)</p>
+            percentage of those in 2011, even though this technically
+            represents an infinite increase. (<var>n</var> / 0 &times; 100 = &infin;)</p>
+
+            <div id="projects">
+                <h3>Major Projects</h3>
+                <p>Heartland's <a href="http://www.desmogblog.com/sites/beta.desmogblog.com/files/(1-15-2012)%202012%20Fundraising%20Plan.pdf">2012 fundraising plan</a>
+                describes a number of projects for which they aim to raise
+                funds. Several of the projects are simply blog posting campaigns
+                passed off as "news" on Heartland's web site and distributed to
+                other like-minded blogs. From the plan, on page 12:</p>
+
+                <blockquote>While ideologically motivated individual donors are
+                    apt to contribute for general operating, corporations and
+                    (increasingly) foundations want project-specific proposals.
+                    We try as best we can to tailor our programs to meet both
+                    the requirements of our mission&mdash;to discover, develop, and
+                    promote free-market solutions to social and economic
+                    problems&mdash;while also exciting new donors to make the
+                    contributions needed to fund our programs.</blockquote>
+
+                <p>Major projects are labeled by abbreviations in the
+                donor tables "Project" column:</p>
+
+                <dl>
+                    <dt id="prj-BTN"><abbr>BTN</abbr>: <span>Bank Technology News</span></dt>
+                    <dd><dd>
+
+                    <dt id="prj-FIRE"><abbr>FIRE</abbr>: <span>Finance, Insurance, and Real Estate</span></dt>
+                    <dd>A classification created by the
+                    <a href="http://www.census.gov/econ/www/se0100.html">U.S. Census</a>
+                    for the purposes of categorizing the economic activity of
+                    financial institutions (such as banks and hedge funds),
+                    insurance companies, and real estate businesses.</dd>
+
+                    <dt id="prj-GO"><abbr>GO</abbr>: <span>General Operating</span></dt>
+                    <dd>Presumably, all expenses related to Heartland's general
+                    operations. </dd>
+                    </dd>
+
+                    <dt id="prj-HCN"><abbr>HCN</abbr>: <span>Health Care News</span></dt>
+                    <dd>One of Heartland's major healthcare-related projects is
+                    the so-called "Free to Choose Medicine Project", described
+                    on page 13 of the fundraising plan:
+                    <blockquote>Free To Choose Medicine (FTCM) is a new project
+                        of The Heartland Institute. During 2011, Heartland&rsquo;s
+                        president Joseph Bast wrote an 80-page proposal for the
+                        effort, and donor Bart Madden agreed to contribute half
+                        of the project&rsquo;s $1 million/year budget. In January, a
+                        director for the project,
+                        <a href="http://heartland.org/vincent-h-galbiati">Vince Galbriati</a>,
+                        was hired. We expect the FTCM to bring in at least $1 million in
+                        gifts from all donors, including Bart Madden.
+                        Approximately $500,000 in gifts will be from first-time
+                        donors. <em>There are scores of businesses and trade
+                        associations with a keen interest in our effort, and
+                        many wealthy individuals have strong personal
+                        motivation to see faster access to potentially
+                        life-saving new drugs become a reality.</em>
+                        <a href="http://heartland.org/vincent-h-galbiati">Vince Galbriati</a>
+                        is eager to &ldquo;pitch&rdquo; the proposal to
+                        investors in drug companies. Several current Heartland
+                        donors are already donating to the project, and will
+                        give more if they see progress being made.</blockquote>
+                    (emphasis added)</dd>
+                </dl>
+
+                <dt id="prj-ECN"><abbr>ECN</abbr>: <span>Environment &amp; Climate News</span></dt>
+                <dd></dd>
+
+                <dt id="prj-LEGAL"><abbr>LEGAL</abbr>: <span>Legal activities</span></dt>
+                <dd>Expenses related legal activities, presumably including
+                the salary of Heartland&rsquo;s legal counsel, 
+                <a href="http://heartland.org/maureen-martin">Maureen Martin</a>.</dd>
+            </div>
         </div>
 
         <script type="text/javascript" defer>
@@ -62,11 +137,12 @@
         ];
 
         // dollar value color scale
-        var dc = colorbrewer.Reds[3],
+        var reds = colorbrewer.Reds[3],
+            purples = colorbrewer.Purples[3],
             dollars = d3.scale.linear()
                 .clamp(true)
                 .domain([0, 10000, 100000, 500000])
-                .range(["rgb(255,255,255)", dc[0], dc[1], dc[2]]);
+                .range(["rgb(255,255,255)", reds[0], reds[1], reds[2]]);
 
         // column scales by key
         var scales = {
@@ -78,7 +154,19 @@
             "pct": d3.scale.linear()
                 .clamp(true)
                 .domain([0, 100, 200, 1000])
-                .range(["rgb(255,255,255)", dc[0], dc[1], dc[2]])
+                .range(["rgb(255,255,255)", purples[0], purples[1], purples[2]])
+        };
+
+        var formatters = {};
+        // format the name with a google search link
+        formatters["name"] = function(d, i) {
+            return d3.select(this).append("a")
+                .attr("href", "http://www.google.com/search?q=" + encodeURIComponent(d.str));
+        };
+        // format the project with a link to the project description
+        formatters["prj"] = function(d, i) {
+            return d3.select(this).append("a")
+                .attr("href", "#prj-" + d.str);
         };
 
         // append <th> elements for each column
@@ -194,6 +282,7 @@
 
         // load the CSV
         d3.csv("data/2012-donors.csv", function(donors) {
+
             // the last row is the totals; pop it off the list
             var totals = donors.pop();
 
@@ -261,27 +350,18 @@
             cells.filter(".col-pct")
                 .each(function(d) {
                     if (d.str == "??") {
-                        d.str = "* 100%";
+                        d.str = "100%";
                         d.num = d.row.parsed.pct = 100;
                         d3.select(this).classed("note", true);
                     }
                 });
 
             // iterate over all the cells...
-            cells.each(function(d) {
-                // the name column cells get a link to Google
-                if (d.col.key == "name") {
-                    d3.select(this)
-                        .append("a")
-                            .attr("href", function(d) {
-                                return "http://www.google.com/search?rls=en&q=" + encodeURIComponent(d.str) + "&ie=UTF-8&oe=UTF-8";
-                            })
-                            .text(function(d) { return d.str; });
-                // and the rest just get the text
-                } else {
-                    d3.select(this)
-                        .text(function(d) { return d.str; });
-                }
+            cells.each(function(d, i) {
+                var el = (d.col.key in formatters)
+                    ? formatters[d.col.key].call(this, d, i)
+                    : d3.select(this);
+                el.text(d.str);
             });
 
             // color the cells that have scales defined

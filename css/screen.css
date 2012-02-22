@@ -52,3 +52,7 @@ tbody tr:hover td {
 .note {
     background-color: #ffd !important;
 }
+
+dt {
+    font-weight: bold;
+}
