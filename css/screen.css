@@ -44,10 +44,12 @@ tbody tr:nth-child(odd) td {
     background-color: #ededed;
 }
 
+/*
 tbody tr:hover td {
     border-color: black;
     border-style: dashed;
 }
+*/
 
 .note {
     background-color: #ffd !important;
